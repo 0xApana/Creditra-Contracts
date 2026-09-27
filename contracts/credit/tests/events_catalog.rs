@@ -522,6 +522,58 @@ fn raw_value_events_shape() {
     }
 }
 
+// ── Oracle registry event shape tests ─────────────────────────────────────────
+
+#[test]
+fn oracle_added_shape() {
+    let (env, _borrower, admin) = env_and_addresses();
+
+    publish_oracle_added_event(&env, &admin, 100);
+
+    assert_eq!(first_topic(&env, 0), symbol_short!("credit"));
+    assert_eq!(second_topic(&env, 0), Symbol::new(&env, "orc_add"));
+}
+
+#[test]
+fn oracle_removed_shape() {
+    let (env, _borrower, admin) = env_and_addresses();
+
+    publish_oracle_removed_event(&env, &admin);
+
+    assert_eq!(first_topic(&env, 0), symbol_short!("credit"));
+    assert_eq!(second_topic(&env, 0), Symbol::new(&env, "orc_rmv"));
+}
+
+#[test]
+fn oracle_quorum_threshold_set_shape() {
+    let (env, _borrower, _admin) = env_and_addresses();
+
+    publish_oracle_quorum_threshold_set_event(&env, 50);
+
+    assert_eq!(first_topic(&env, 0), symbol_short!("credit"));
+    assert_eq!(second_topic(&env, 0), Symbol::new(&env, "orc_qthrs"));
+}
+
+#[test]
+fn oracle_reporting_window_set_shape() {
+    let (env, _borrower, _admin) = env_and_addresses();
+
+    publish_oracle_reporting_window_set_event(&env, 3600);
+
+    assert_eq!(first_topic(&env, 0), symbol_short!("credit"));
+    assert_eq!(second_topic(&env, 0), Symbol::new(&env, "orc_win"));
+}
+
+#[test]
+fn oracle_value_reported_shape() {
+    let (env, _borrower, admin) = env_and_addresses();
+
+    publish_oracle_value_reported_event(&env, &admin, 1000000);
+
+    assert_eq!(first_topic(&env, 0), symbol_short!("credit"));
+    assert_eq!(second_topic(&env, 0), Symbol::new(&env, "orc_rpt"));
+}
+
 // ── Auction contract event shape tests ────────────────────────────────────────
 
 #[test]
@@ -743,6 +795,28 @@ fn all_credit_event_structs_instantiate() {
         borrower: borrower.clone(),
         merkle_root: BytesN::new(&env, &[0x33; 32]),
         count: 10,
+    };
+    let _ = OracleAddedEvent {
+        oracle: admin.clone(),
+        weight: 100,
+        timestamp: 1000,
+    };
+    let _ = OracleRemovedEvent {
+        oracle: admin.clone(),
+        timestamp: 1000,
+    };
+    let _ = OracleQuorumThresholdSetEvent {
+        threshold: 50,
+        timestamp: 1000,
+    };
+    let _ = OracleReportingWindowSetEvent {
+        window_seconds: 3600,
+        timestamp: 1000,
+    };
+    let _ = OracleValueReportedEvent {
+        oracle: admin.clone(),
+        value: 1000000,
+        timestamp: 1000,
     };
 }
 

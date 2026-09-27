@@ -170,6 +170,16 @@ noted. Publishers live in `contracts/credit/src/events.rs`.
 | `"orc_qprc"` | `(i128, u32, u64)` | 1. `price: i128`, 2. `quorum_k: u32`, 3. `timestamp: u64` | 1.0.0 | Stable |
 | `"orc_price"` | `(i128, u64)` | 1. `price: i128`, 2. `timestamp: u64` | 1.0.0 | Stable |
 
+### 4.12 Oracle registry events
+
+| Second topic | Payload struct | Field order & types | Version added | Stability |
+|---|---|---|---|---|
+| `"orc_add"` | `OracleAddedEvent` | 1. `oracle: Address`, 2. `weight: u32`, 3. `timestamp: u64` | 1.1.0 | Stable |
+| `"orc_rmv"` | `OracleRemovedEvent` | 1. `oracle: Address`, 2. `timestamp: u64` | 1.1.0 | Stable |
+| `"orc_qthrs"` | `OracleQuorumThresholdSetEvent` | 1. `threshold: u32`, 2. `timestamp: u64` | 1.1.0 | Stable |
+| `"orc_win"` | `OracleReportingWindowSetEvent` | 1. `window_seconds: u64`, 2. `timestamp: u64` | 1.1.0 | Stable |
+| `"orc_rpt"` | `OracleValueReportedEvent` | 1. `oracle: Address`, 2. `value: u128`, 3. `timestamp: u64` | 1.1.0 | Stable |
+
 ---
 
 ## 5. Accrual Contract Event Catalog
@@ -275,6 +285,11 @@ All events are emitted by the CosmWasm `creditra-credit` contract
 | `("credit","orc_price")` | 1.0.0 | No | — | Raw tuple payload |
 | `("credit","orc_qcfg")` | 1.0.0 | No | — | Oracle quorum config raw tuple payload |
 | `("credit","orc_qprc")` | 1.0.0 | No | — | Oracle quorum resolved price raw tuple payload |
+| `("credit","orc_add")` | 1.1.0 | No | — | Oracle added/weight updated event |
+| `("credit","orc_rmv")` | 1.1.0 | No | — | Oracle removed event |
+| `("credit","orc_qthrs")` | 1.1.0 | No | — | Oracle quorum threshold set event |
+| `("credit","orc_win")` | 1.1.0 | No | — | Oracle reporting window set event |
+| `("credit","orc_rpt")` | 1.1.0 | No | — | Oracle value reported event |
 | `("blk_chg",)` | 1.0.0 | No | — | Single-element topic tuple |
 | `("BID_RFDN","auction")` | 1.0.0 | No | — | |
 | `("AUC_CLOSE","auction")` | 1.0.0 | No | — | |
@@ -347,6 +362,11 @@ publisher takes `&Env` plus the event-specific payload fields and calls
 | `publish_oracle_quorum_config_set_event` | `("credit", "orc_qcfg")` |
 | `publish_oracle_quorum_price_set_event` | `("credit", "orc_qprc")` |
 | `publish_oracle_price_accepted_event` | `("credit", "orc_price")` |
+| `publish_oracle_added_event` | `("credit", "orc_add")` |
+| `publish_oracle_removed_event` | `("credit", "orc_rmv")` |
+| `publish_oracle_quorum_threshold_set_event` | `("credit", "orc_qthrs")` |
+| `publish_oracle_reporting_window_set_event` | `("credit", "orc_win")` |
+| `publish_oracle_value_reported_event` | `("credit", "orc_rpt")` |
 | `publish_risk_parameters_updated` | `("credit", "risk_upd")` |
 | `publish_bid_refunded_event` | `("BID_RFDN", "auction")` |
 | `publish_auction_closed_event` | `("AUC_CLOSE", "auction")` |
@@ -365,6 +385,7 @@ publisher takes `&Env` plus the event-specific payload fields and calls
 | 2026-06-28 | Added `contracts/credit/tests/events_catalog.rs` | New integration test verifying every cataloged event is emitted with the correct topic and payload shape. |
 | 2026-07-24 | Added `DrawReversedEvent`, `CollateralPartialReleasedEvent`, oracle quorum events (`orc_qcfg`, `orc_qprc`) to catalog | Catalog was missing 4 events present in `contracts/credit/src/events.rs`. Fixed `GraceWaiverAppliedEvent` → `GraceWaiverReceiptEvent` naming to match code. Added corresponding tests. |
 | 2026-07-25 | Added accrual contract events (`contracts/accrual/`), CosmWasm contract events (`contracts/creditra-credit/`). Fixed `"default"` → `"defaulted"` lifecycle topic. Fixed `BorrowerFrozenEvent` topic from `("credit","br_freeze")` to `("br_freeze",)`. Added `Restricted = 4` to `CreditStatus`. Expanded `FreezeReason` with all 5 variants. Updated doc comment in `events.rs`. | Schema v1.0 → v1.1 |
+| 2026-09-27 | Added oracle registry events (`OracleAddedEvent`, `OracleRemovedEvent`, `OracleQuorumThresholdSetEvent`, `OracleReportingWindowSetEvent`, `OracleValueReportedEvent`) to `contracts/credit/src/events.rs`. Added corresponding publishers and event emissions in `contracts/credit/src/oracles.rs`. Enables indexers to audit oracle registry changes (who can report prices, weight changes, threshold/window configuration, and reported values). Closes #1264. | Schema v1.1 (no version bump; additive change) |
 
 ---
 
