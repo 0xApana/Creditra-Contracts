@@ -110,7 +110,12 @@ mod config;
 pub mod events;
 mod fees;
 mod freeze;
-mod handshake;
+// Public: `Auction::get_version` returns `handshake::ProtocolVersion`, so any
+// external auction contract implementing the handshake CPI — including the
+// mock auctions used by the settlement tests — must be able to name the type.
+// A private module made the `Auction` trait unimplementable outside this crate
+// (E0603 at the call site).
+pub mod handshake;
 #[cfg(all(not(target_arch = "wasm32"), feature = "instrument"))]
 pub mod instrument;
 mod lifecycle;
