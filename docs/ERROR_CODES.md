@@ -89,7 +89,7 @@ Arithmetic or numeric computation failures — inputs or calculations fall outsi
 
 ---
 
-## 4. Limit (codes 6, 10, 13, 17, 28, 45, 47, 59)
+## 4. Limit (codes 6, 10, 13, 17, 28, 45, 47, 59, 66)
 
 Draw, repay, or limit operations that violate numeric caps or boundary conditions.
 
@@ -103,6 +103,7 @@ Draw, repay, or limit operations that violate numeric caps or boundary condition
 | 45   | `CloseFactorAboveMax` | Close factor exceeds protocol maximum | `settle_default_liquidation` validation |
 | 47   | `DrawReversalWindowExpired` | Draw reversal window has expired | `reverse_draw` after `DRAW_REVERSAL_WINDOW_SECS` |
 | 59   | `UtilizedNotZero` | Utilization must be zero | Borrower self-close with outstanding debt |
+| 66   | `BorrowerExposureCapExceeded` | Per-borrower exposure cap exceeded | `draw_credit` when utilized + amount > borrower cap |
 
 **SDK recovery:**
 - `OverLimit`: Reduce draw amount to ≤ `credit_limit - utilized`.

@@ -90,6 +90,7 @@ calculation). |
 | 28   | `RepayExceedsMaxAmount` | Repay amount exceeds the per-transaction `max_repay_amount`. |
 | 45   | `CloseFactorAboveMax` | Supplied `close_factor_bps` exceeds the protocol-configured maximum. |
 | 47   | `DrawReversalWindowExpired` | Draw reversal attempted after the allowed reversal window elapsed. |
+| 66   | `BorrowerExposureCapExceeded` | Draw would push this borrower above their per-borrower exposure cap (`set_borrower_exposure_cap`). |
 
 **Recovery action:**
 - `OverLimit`: Reduce the draw amount to ≤ `credit_limit - utilized`. Query

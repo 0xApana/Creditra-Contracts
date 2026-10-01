@@ -78,6 +78,8 @@ fn error_discriminants_are_stable() {
     assert_eq!(ContractError::MissingVrfCommitment as u32, 64);
     // Appended in Issue #1220 — timelocked treasury withdrawal underflow.
     assert_eq!(ContractError::InsufficientTreasuryBalance as u32, 65);
+    // Appended in Issue #1413 — per-borrower absolute exposure cap.
+    assert_eq!(ContractError::BorrowerExposureCapExceeded as u32, 66);
 }
 
 /// Verify no two variants share the same discriminant.
@@ -145,6 +147,7 @@ fn no_duplicate_discriminants() {
         ContractError::AuctionActive as u32,
         ContractError::MissingVrfCommitment as u32,
         ContractError::InsufficientTreasuryBalance as u32,
+        ContractError::BorrowerExposureCapExceeded as u32,
     ];
 
     let unique: HashSet<u32> = codes.iter().cloned().collect();
@@ -158,7 +161,7 @@ fn no_duplicate_discriminants() {
 /// Verify the total variant count matches expectations.
 #[test]
 fn variant_count_is_known() {
-    const EXPECTED_VARIANT_COUNT: usize = 63;
+    const EXPECTED_VARIANT_COUNT: usize = 64;
 
     let codes = [
         ContractError::Unauthorized as u32,
@@ -225,6 +228,7 @@ fn variant_count_is_known() {
         ContractError::AuctionActive as u32,
         ContractError::MissingVrfCommitment as u32,
         ContractError::InsufficientTreasuryBalance as u32,
+        ContractError::BorrowerExposureCapExceeded as u32,
     ];
 
     assert_eq!(
@@ -639,6 +643,7 @@ fn borrow_error_catalog_lists_all_variants() {
         "InvalidRiskWeight",
         "MissingVrfCommitment",
         "InsufficientTreasuryBalance",
+        "BorrowerExposureCapExceeded",
     ] {
         assert!(
             catalog.contains(variant),
@@ -720,6 +725,7 @@ fn every_variant_has_known_category() {
         ContractError::AuctionActive.category(),
         ContractError::MissingVrfCommitment.category(),
         ContractError::InsufficientTreasuryBalance.category(),
+        ContractError::BorrowerExposureCapExceeded.category(),
     ];
 
     let mut sorted: Vec<ContractErrorCategory> = all_variants.clone();
@@ -730,7 +736,7 @@ fn every_variant_has_known_category() {
         12,
         "Not all 12 categories are covered by variant mappings"
     );
-    assert_eq!(all_variants.len(), 63, "Expected 63 ContractError variants");
+    assert_eq!(all_variants.len(), 64, "Expected 64 ContractError variants");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
