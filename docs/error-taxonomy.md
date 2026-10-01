@@ -120,6 +120,7 @@ where the contract can observe it. |
 | 30   | `TreasuryNotSet` | Treasury address is not configured when attempting a treasury withdrawal. |
 | 31   | `ExposureCapExceeded` | Draw would push global `TotalUtilized` above `MaxTotalExposure`. |
 | 41   | `BountyNotSet` | Bounty pool address is not configured. |
+| 65   | `InsufficientTreasuryBalance` | Tracked treasury balance fell below the pending withdrawal snapshot at execution. |
 
 **Recovery action:**
 - `MissingLiquidityToken` / `MissingLiquiditySource`: Inform the admin to

@@ -1317,6 +1317,11 @@ impl Credit {
             env.panic_with_error(ContractError::TreasuryTimelockActive);
         }
 
+        // Check and consume the proposal before the external token call.
+        // Soroban rolls both storage writes back if that transfer fails.
+        let remaining_balance = crate::storage::subtract_treasury_balance(&env, proposal.amount);
+        clear_pending_treasury_withdrawal(&env);
+
         if proposal.amount > 0 {
             let token_address: Address = env
                 .storage()
@@ -1331,9 +1336,6 @@ impl Credit {
             token_client.transfer(&contract_address, &proposal.recipient, &proposal.amount);
         }
 
-        clear_pending_treasury_withdrawal(&env);
-        crate::storage::clear_treasury_balance(&env);
-
         publish_treasury_withdrawal_executed(
             &env,
             TreasuryWithdrawalExecutedEvent {
@@ -1341,6 +1343,7 @@ impl Credit {
                 amount: proposal.amount,
                 executor: admin,
                 executed_at: now,
+                remaining_balance,
             },
         );
     }

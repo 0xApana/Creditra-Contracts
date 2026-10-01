@@ -129,6 +129,7 @@ Liquidity configuration is missing or a reserve/allowance/balance check fails.
 | 30   | `TreasuryNotSet` | Treasury not configured | `propose_treasury_withdrawal` without treasury |
 | 31   | `ExposureCapExceeded` | Global exposure cap exceeded | `draw_credit` when total_utilized + amount > cap |
 | 41   | `BountyNotSet` | Bounty address not configured | `withdraw_bounty` without bounty set |
+| 65   | `InsufficientTreasuryBalance` | Treasury balance below pending withdrawal | `execute_treasury_withdrawal` when the tracked balance < proposal amount |
 | 56   | `InsufficientReserve` | Reserve balance below draw amount | `draw_credit` when token reserve < amount |
 | 57   | `InsufficientAllowance` | Borrower token allowance insufficient | `repay_credit` when allowance < repayment |
 | 58   | `InsufficientBalance` | Borrower token balance insufficient | `repay_credit` when balance < repayment |
