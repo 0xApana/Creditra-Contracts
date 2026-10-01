@@ -607,7 +607,22 @@ against the expected reserve rather than treating the raw balance as reserves.
 | Treasury/bounty withdraw with insufficient accumulator | Withdrawal is capped by the accumulator, so fees cannot be paid out of collateral or principal. |
 | Settlement recovery shortfall | `settle_default_liquidation` asserts the auction's reported recovery against the admin-supplied `recovered_amount`; the credit contract itself transfers no tokens on this path. |
 
-## 12. References
+---
+
+## 12. Support Crates (Test/Indexer)
+
+The `contracts/` directory contains several wrapper crates that are **not deployable smart contracts**. They exist solely to host integration tests, error stability snapshots, or to expose read-only capability bitmaps to off-chain indexers and clients without requiring them to simulate full transactions. These crates mostly re-export logic from the main `creditra-credit` contract.
+
+The wrapper crates include:
+- `creditra-accrual`: Error stability tests and gas snapshots for accrual logic.
+- `creditra-borrow`: Error stability tests for the borrow/draw/repay surface.
+- `creditra-freeze`: Authentication boundary tests for freeze operations.
+- `creditra-lifecycle`: Read-only bitmap reporting permitted lifecycle transitions.
+- `creditra-query`: Read-only bitmap reporting borrower-scoped query capabilities.
+
+---
+
+## 13. References
 
 - `contracts/credit/src/lib.rs` — all entrypoints
 - `contracts/credit/src/lifecycle.rs` — state machine implementation
