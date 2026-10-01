@@ -147,7 +147,7 @@ use soroban_sdk::{
     contract, contractimpl, symbol_short, token, Address, BytesN, Env, Symbol, Vec,
 };
 
-use crate::auth::{require_admin, require_admin_auth};
+use crate::auth::{require_admin, require_admin_auth, require_admin_auth_with_argument};
 use crate::attestation::AttestationBatch;
 use crate::events::{
     publish_admin_rotation_accepted, publish_admin_rotation_proposed,
@@ -1305,8 +1305,7 @@ impl Credit {
 
     /// Configure the treasury address where withdrawn fees will be sent (admin only).
     pub fn set_treasury(env: Env, admin: Address, treasury: Address) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        require_admin_auth_with_argument(&env, &admin);
         crate::storage::set_treasury_address(&env, &treasury);
     }
 
@@ -1322,8 +1321,7 @@ impl Credit {
     /// proposal time, and the proposal may be executed only after the timelock
     /// expires.
     pub fn propose_treasury_withdrawal(env: Env, admin: Address) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        require_admin_auth_with_argument(&env, &admin);
 
         let treasury = crate::storage::get_treasury_address(&env)
             .unwrap_or_else(|| env.panic_with_error(ContractError::TreasuryNotSet));
@@ -1357,8 +1355,7 @@ impl Credit {
 
     /// Execute the currently pending treasury withdrawal, if the timelock has elapsed.
     pub fn execute_treasury_withdrawal(env: Env, admin: Address) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        require_admin_auth_with_argument(&env, &admin);
 
         let proposal = get_pending_treasury_withdrawal(&env)
             .unwrap_or_else(|| env.panic_with_error(ContractError::NoPendingTreasuryWithdrawal));
@@ -1434,8 +1431,7 @@ impl Credit {
 
     /// Configure the bounty pool address where withdrawn bounty fees will be sent (admin only).
     pub fn set_bounty(env: Env, admin: Address, bounty: Address) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        require_admin_auth_with_argument(&env, &admin);
         crate::storage::set_bounty_address(&env, &bounty);
     }
 
@@ -1495,8 +1491,7 @@ impl Credit {
     /// unless a matured proposal is pending, in which case it simply delegates
     /// to [`Self::execute_treasury_withdrawal`].
     pub fn withdraw_treasury(env: Env, admin: Address) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        require_admin_auth_with_argument(&env, &admin);
 
         // Require a pending proposal that has passed its unlock timestamp.
         let proposal = get_pending_treasury_withdrawal(&env)
@@ -2369,8 +2364,7 @@ impl Credit {
     /// # Events
     /// Emits `BorrowerBlockedEvent { blocked: true }`.
     pub fn block_borrower(env: Env, admin: Address, borrower: Address) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        require_admin_auth_with_argument(&env, &admin);
         storage_set_borrower_blocked(&env, &borrower, true);
         publish_borrower_blocked_event(&env, &borrower, true);
     }
@@ -2380,8 +2374,7 @@ impl Credit {
     /// # Events
     /// Emits `BorrowerBlockedEvent { blocked: false }`.
     pub fn unblock_borrower(env: Env, admin: Address, borrower: Address) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        require_admin_auth_with_argument(&env, &admin);
         set_borrower_unblocked(&env, &borrower);
         publish_borrower_blocked_event(&env, &borrower, false);
     }
@@ -2400,8 +2393,7 @@ impl Credit {
     /// # Events
     /// Emits one `BorrowerBlockedEvent { blocked: true }` per borrower.
     pub fn bulk_block_borrowers(env: Env, admin: Address, borrowers: soroban_sdk::Vec<Address>) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        require_admin_auth_with_argument(&env, &admin);
         if borrowers.len() > BULK_BLOCK_MAX {
             env.panic_with_error(ContractError::InvalidAmount);
         }
@@ -2772,7 +2764,7 @@ impl Credit {
     /// Temporarily freeze a borrower's draws until the given expiry timestamp (admin only).
     ///
     /// # Parameters
-    /// - `admin`: Must be the current contract admin (checked via `require_admin_auth` + explicit `require_auth`).
+    /// - `admin`: Must match the stored contract admin; that address is authorized exactly once.
     /// - `borrower`: The address whose draw capability should be frozen.
     /// - `expiry_ts`: Ledger timestamp (seconds) at which the freeze auto-expires.
     ///   Must be strictly greater than the current ledger timestamp.
@@ -2791,8 +2783,7 @@ impl Credit {
     /// # Events
     /// Emits `BorrowerFrozenEvent` on topic `("br_freeze",)`.
     pub fn freeze_borrower_until(env: Env, admin: Address, borrower: Address, expiry_ts: u64) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        require_admin_auth_with_argument(&env, &admin);
         enforce_borrow_admin_cooldown(&env, &borrower);
 
         let now = env.ledger().timestamp();
@@ -2831,8 +2822,7 @@ impl Credit {
     /// # Errors
     /// - Reverts with auth error if caller is not the configured admin.
     pub fn unfreeze_borrower(env: Env, admin: Address, borrower: Address) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        require_admin_auth_with_argument(&env, &admin);
         enforce_borrow_admin_cooldown(&env, &borrower);
         clear_borrower_frozen(&env, &borrower);
         record_freeze_timestamp_if_cooldown(&env);
