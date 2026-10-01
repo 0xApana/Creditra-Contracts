@@ -102,7 +102,9 @@ mod amount_validation_tests;
 mod attestation;
 mod auth;
 mod borrow;
-mod penalties;
+pub mod penalties;
+#[cfg(test)]
+mod penalties_tests;
 mod collateral;
 #[path = "../../collateral/src/admin.rs"]
 mod collateral_admin;

@@ -1488,8 +1488,19 @@ pub fn advance_repayment_schedule_after_repay(
     // did millions of storage writes and event publishes and could exceed the
     // CPU budget. Charging the aggregate once performs a single write and emits
     // a single event while accruing the same total fee.
-    let late_fee = crate::storage::get_late_fee_flat(env);
-    if late_fee > 0 {
+    //
+    // A structured `LateFeeConfig` supersedes both legacy keys (#1224):
+    // `Flat` charges its configured amount per overdue installment, while
+    // `AprBased` charges nothing here because its surcharge is applied to
+    // interest in `apply_accrual`. Only an absent config falls back to the
+    // legacy `LateFeeFlat` amount.
+    let config = crate::storage::get_late_fee_config(env);
+    let per_installment_fee = match config {
+        Some(cfg) => crate::penalties::compute_late_fee(cfg, 1)
+            .unwrap_or_else(|err| env.panic_with_error(err)),
+        None => crate::storage::get_late_fee_flat(env),
+    };
+    if per_installment_fee > 0 {
         let now = env.ledger().timestamp();
         let overdue = overdue_installment_count(
             now,
@@ -1500,7 +1511,7 @@ pub fn advance_repayment_schedule_after_repay(
         if overdue > 0 {
             // `checked_mul` reverts with `Overflow` once the aggregate fee
             // exceeds `i128`, matching the old per-installment loop.
-            let aggregate_fee = late_fee
+            let aggregate_fee = per_installment_fee
                 .checked_mul(overdue as i128)
                 .unwrap_or_else(|| env.panic_with_error(ContractError::Overflow));
             total_late_fee = aggregate_fee;
