@@ -625,6 +625,14 @@ impl Credit {
 
         let timestamp = env.ledger().timestamp();
         storage_set_last_draw_ts(&env, &borrower, timestamp);
+        // Record the draw in the audit trail so `reverse_draw` can find the
+        // original amount for this `(borrower, timestamp)` pair (Issue #1326).
+        let draw_audit_key = DataKey::DrawAudit(crate::storage::DrawAuditKey {
+            borrower: borrower.clone(),
+            timestamp,
+        });
+        env.storage().persistent().set(&draw_audit_key, &amount);
+        crate::storage::bump_persistent_ttl(&env, &draw_audit_key);
         publish_drawn_event(
             &env,
             DrawnEvent {
@@ -2469,9 +2477,11 @@ impl Credit {
 
         // Bump TTL on read: this is a hot accrual read path, so an active
         // borrower's entry must never be archived independently of draw/repay.
-        let mut credit_line: CreditLineData = storage_get_credit_line(&env, &borrower)
+        let stored_line: CreditLineData = storage_get_credit_line(&env, &borrower)
             .unwrap_or_else(|| env.panic_with_error(ContractError::CreditLineNotFound));
-        credit_line = accrual::apply_accrual(&env, credit_line);
+        let previous_utilized = stored_line.utilized_amount;
+        let previous_status = Some(stored_line.status);
+        let mut credit_line = accrual::apply_accrual(&env, stored_line);
 
         // Load the audit trail through TTL-bumping accessors as well: these are
         // per-borrower persistent entries, so a reverse-draw path must refresh
@@ -2490,7 +2500,15 @@ impl Credit {
             .unwrap_or_else(|| env.panic_with_error(ContractError::OverLimit));
 
         credit_line.utilized_amount = new_utilized_amount;
-        env.storage().persistent().set(&borrower, &credit_line);
+        // Persist through the shared helper so `TotalUtilized` and the other
+        // protocol aggregates stay in sync with the reversal (Issue #1326).
+        persist_credit_line(
+            &env,
+            &borrower,
+            &credit_line,
+            previous_utilized,
+            previous_status,
+        );
         storage_set_draw_reversed_amount(&env, &borrower, original_ts, already_reversed + amount);
 
         publish_draw_reversed_event(

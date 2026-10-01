@@ -640,7 +640,7 @@ cargo test -p creditra-credit --test fee_split
 
 - [`PROTOCOL_SPEC.md`](./PROTOCOL_SPEC.md) §2.7 — the terse entrypoint table.
 - [`EVENT_CATALOG.md`](./EVENT_CATALOG.md) — authoritative event topics.
-- [`STORAGE_LAYOUT.md`](./STORAGE_LAYOUT.md) / [`STORAGE_LAYOUT.md`](./STORAGE_LAYOUT.md) — tier reference.
+- [`STORAGE_LAYOUT.md`](./STORAGE_LAYOUT.md) — tier reference.
 - [`SECURITY.md`](./SECURITY.md) T9 — why treasury drain cannot reach reserve funds.
 - [`contract-errors.md`](./contract-errors.md) / [`errors.md`](./errors.md) — full error tables.
 - [`EXECUTION_QUALITY.md`](./EXECUTION_QUALITY.md) — test catalog and CI.
