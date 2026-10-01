@@ -196,23 +196,24 @@ fn test_draw_credit_one_unit_short_reverts_error_35() {
 }
 
 #[test]
-fn test_draw_credit_small_utilization_floor_rounding_boundary() {
+fn test_draw_credit_small_utilization_ceiling_rounding_boundary() {
     let env = Env::default();
     let (client, _, borrower, _) = setup(&env);
 
     client.open_credit_line(&borrower, &10000, &0, &0);
 
-    // For utilization = 1 at 15,000 bps (150% ratio):
-    // required = floor(1 * 15,000 / 10_000) = floor(1.5) = 1 unit.
-    client.deposit_collateral(&borrower, &1);
+    // Draw uses the same ceiling rounding as withdraw / partial release
+    // (Issue #1279). For utilization = 1 at 15,000 bps (150% ratio):
+    // required = ceil(1 * 15,000 / 10_000) = ceil(1.5) = 2 units.
+    client.deposit_collateral(&borrower, &2);
     client.draw_credit(&borrower, &1);
-    assert_eq!(client.get_collateral(&borrower), 1);
+    assert_eq!(client.get_collateral(&borrower), 2);
 
     // For utilization = 5 total (drawing 4 more) at 15,000 bps:
-    // required = floor(5 * 15,000 / 10_000) = floor(7.5) = 7 units.
-    client.deposit_collateral(&borrower, &6); // total collateral = 7
+    // required = ceil(5 * 15,000 / 10_000) = ceil(7.5) = 8 units.
+    client.deposit_collateral(&borrower, &6); // total collateral = 8
     client.draw_credit(&borrower, &4);
-    assert_eq!(client.get_collateral(&borrower), 7);
+    assert_eq!(client.get_collateral(&borrower), 8);
 }
 
 #[test]
@@ -224,23 +225,24 @@ fn test_draw_credit_small_utilization_one_unit_short_reverts_error_35() {
     client.open_credit_line(&borrower, &10000, &0, &0);
 
     // For utilization = 1 at 15,000 bps:
-    // required = floor(1 * 15,000 / 10_000) = 1.
-    // 0 collateral is 1 unit short of 1.
+    // required = ceil(1 * 15,000 / 10_000) = 2.
+    // 1 collateral is 1 unit short of 2.
+    client.deposit_collateral(&borrower, &1);
     client.draw_credit(&borrower, &1);
 }
 
 #[test]
 #[should_panic(expected = "Error(Contract, #35)")] // CollateralRatioBelowMinimum
-fn test_draw_credit_small_utilization_floor_rounding_one_unit_short_reverts_error_35() {
+fn test_draw_credit_small_utilization_ceiling_rounding_one_unit_short_reverts_error_35() {
     let env = Env::default();
     let (client, _, borrower, _) = setup(&env);
 
     client.open_credit_line(&borrower, &10000, &0, &0);
 
     // For utilization = 5 at 15,000 bps:
-    // required = floor(5 * 15,000 / 10_000) = floor(7.5) = 7.
-    // 6 collateral is 1 unit short of required 7.
-    client.deposit_collateral(&borrower, &6);
+    // required = ceil(5 * 15,000 / 10_000) = ceil(7.5) = 8.
+    // 7 collateral is 1 unit short of required 8.
+    client.deposit_collateral(&borrower, &7);
     client.draw_credit(&borrower, &5);
 }
 
