@@ -1338,8 +1338,10 @@ impl Credit {
 
     /// Withdraw accumulated bounty pool balance to configured bounty address (admin only).
     pub fn withdraw_bounty(env: Env, admin: Address) {
-        admin.require_auth();
-        require_admin_auth(&env);
+        let configured_admin = require_admin_auth(&env);
+        if admin != configured_admin {
+            env.panic_with_error(ContractError::NotAdmin);
+        }
 
         let bounty_addr = crate::storage::get_bounty_address(&env)
             .unwrap_or_else(|| env.panic_with_error(crate::types::ContractError::BountyNotSet));
