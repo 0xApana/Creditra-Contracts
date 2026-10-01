@@ -44,7 +44,7 @@ Reproducible verification:
 cargo llvm-cov --workspace --all-targets --fail-under-lines 95
 cargo build --release --target wasm32-unknown-unknown -p creditra-credit
 ls -l target/wasm32-unknown-unknown/release/creditra_credit.wasm  # < 50 KB
-python3 scripts/list_contract_errors.py --json | jq 'length'      # 38
+python3 scripts/list_contract_errors.py --check                 # canonical doc is in sync
 ```
 
 ---
@@ -55,7 +55,8 @@ Read in this order:
 
 1. [`docs/PROTOCOL_SPEC.md`](./PROTOCOL_SPEC.md) — every entrypoint with exact
    signature, validation order, error returns, storage tiers.
-2. [`docs/contract-errors.md`](./contract-errors.md) — 38-row error table.
+2. [`docs/errors.md`](./errors.md) — **canonical** error reference: 64 codes,
+   category, trigger, and SDK recovery per variant.
 3. [`docs/state-machine.md`](./state-machine.md) — authoritative
    `CreditStatus` transition table.
 4. [`docs/indexer-integration.md`](./indexer-integration.md) — event topics,
@@ -154,7 +155,7 @@ exists but is not referenced from this page (and is run in CI).
 | Contributors | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Contributing guidelines and PR workflow conventions |
 | Grant reviewers / contributors | [`COVERAGE.md`](./COVERAGE.md) | Coverage Guide |
 | Auditors / integrators | [`CROSS_CONTRACT_HANDSHAKE.md`](./CROSS_CONTRACT_HANDSHAKE.md) | Cross-Contract Handshake Protocol |
-| Integrators | [`ERROR_CODES.md`](./ERROR_CODES.md) | ContractError Codes — Categorized Reference |
+| Integrators | [`ERROR_CODES.md`](./ERROR_CODES.md) | Redirect stub → [`errors.md`](./errors.md) |
 | Integrators | [`ERROR_MIGRATION.md`](./ERROR_MIGRATION.md) | V1 to V2 `ContractError` encoding migration |
 | Integrators | [`EVENTS_CATALOG.md`](./EVENTS_CATALOG.md) | **Authoritative event catalog and versioning policy** |
 | Integrators | [`EVENT_SCHEMA.md`](./EVENT_SCHEMA.md) | Event Schema Documentation |
@@ -171,14 +172,14 @@ exists but is not referenced from this page (and is run in CI).
 | Auditors / integrators | [`STORAGE_KEY_ENCODING_DIAGRAMS.md`](./STORAGE_KEY_ENCODING_DIAGRAMS.md) | Soroban storage key encoding & collision resistance diagrams |
 | Integrators | [`STORAGE_LAYOUT.md`](./STORAGE_LAYOUT.md) | **Authoritative storage layout** (DataKey source of truth) |
 | Auditors / integrators | [`VALIDATION_LAYER_DESIGN.md`](./VALIDATION_LAYER_DESIGN.md) | Oracle validation layer architecture & interfaces |
-| Integrators | [`contract-errors.md`](./contract-errors.md) | `ContractError` reference |
+| Integrators | [`contract-errors.md`](./contract-errors.md) | Redirect stub → [`errors.md`](./errors.md) |
 | Contributors | [`contributing-tests.md`](./contributing-tests.md) | Contributing Tests |
 | Everyone | [`credit.md`](./credit.md) | Master credit-contract reference |
 | Operators / auditors | [`default-liquidation-auction-hook.md`](./default-liquidation-auction-hook.md) | Default Liquidation Auction Hook |
 | Operators / auditors | [`default-oracle.md`](./default-oracle.md) | Default Oracle Design (Stellar/Soroban) |
 | Operators | [`deploy.md`](./deploy.md) | Deployment Guide |
-| Auditors / integrators | [`error-taxonomy.md`](./error-taxonomy.md) | `ContractError` Taxonomy — Recovery Actions by Category |
-| Integrators | [`errors.md`](./errors.md) | ContractError Reference |
+| Auditors / integrators | [`error-taxonomy.md`](./error-taxonomy.md) | Redirect stub → [`errors.md`](./errors.md) |
+| Integrators | [`errors.md`](./errors.md) | **Canonical `ContractError` reference** (codes, categories, recovery) |
 | Integrators | [`events-schema.md`](./events-schema.md) | Creditra Event Schema Reference |
 | Integrators | [`indexer-integration.md`](./indexer-integration.md) | Indexer Integration Guide (Soroban Events) |
 | Auditors / contributors | [`interest-accrual-design.md`](./interest-accrual-design.md) | Interest Accrual Design Specification |
@@ -199,12 +200,35 @@ column as the single source of truth and do not extend the duplicates.
 
 | Superseded | Canonical | Reason |
 | --- | --- | --- |
-| [`errors.md`](./errors.md) | [`contract-errors.md`](./contract-errors.md) | legacy copy of the error-code table |
-| [`ERROR_CODES.md`](./ERROR_CODES.md) | [`contract-errors.md`](./contract-errors.md) | upper-case duplicate of the error-code table |
+| [`ERROR_CODES.md`](./ERROR_CODES.md) | [`errors.md`](./errors.md) | redirect stub; the error-code table lives only in `errors.md` |
+| [`contract-errors.md`](./contract-errors.md) | [`errors.md`](./errors.md) | redirect stub; the error-code table lives only in `errors.md` |
+| [`error-taxonomy.md`](./error-taxonomy.md) | [`errors.md`](./errors.md) | redirect stub; categories and recovery live in `errors.md` |
 | [`EVENT_SCHEMA.md`](./EVENT_SCHEMA.md) | [`EVENTS_CATALOG.md`](./EVENTS_CATALOG.md) | legacy event schema (catalogue is authoritative) |
 | [`events-schema.md`](./events-schema.md) | [`EVENTS_CATALOG.md`](./EVENTS_CATALOG.md) | legacy event schema (catalogue is authoritative) |
 | [`interest-accrual-design.md`](./interest-accrual-design.md) | [`interest-accrual.md`](./interest-accrual.md) | design history for the normative accrual reference |
-| [`ERROR_MIGRATION.md`](./ERROR_MIGRATION.md) | [`error-taxonomy.md`](./error-taxonomy.md) | error taxonomy migration note |
+
+### Error documentation
+
+[`docs/errors.md`](./errors.md) is the single canonical error reference for the
+credit contract's `ContractError`. Add codes there and nowhere else;
+`tests/error_discriminants.rs` and `scripts/list_contract_errors.py --check`
+both fail if the published table drifts from
+`contracts/credit/src/types.rs`.
+
+These files are redirect stubs and deliberately carry no tables:
+
+| File | Superseded by |
+|---|---|
+| `ERROR_CODES.md`, `contract-errors.md`, `error-taxonomy.md` | [`errors.md`](./errors.md) |
+| `errors/borrow.md`, `../contracts/credit/docs/errors.md` | [`errors.md`](./errors.md) |
+
+Kept separately because they describe different enums or a different concern:
+
+| File | Scope |
+|---|---|
+| [`errors/collateral.md`](./errors/collateral.md) | `CollateralError` (`contracts/collateral`) |
+| [`errors/freeze.md`](./errors/freeze.md) | `FreezeError` (`contracts/freeze`) |
+| [`ERROR_MIGRATION.md`](./ERROR_MIGRATION.md) | V1 → V2 client-side error-encoding migration log |
 
 ### Top-level companions
 
