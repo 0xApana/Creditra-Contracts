@@ -176,14 +176,17 @@ Oracle price-feed failures — the price data cannot be trusted.
 | 36   | `OraclePriceInvalid` | Price is zero, negative, or malformed | `settle_default_liquidation` oracle validation |
 | 37   | `OraclePriceStale` | Price exceeds `max_age_seconds` | `settle_default_liquidation` staleness check |
 | 38   | `OraclePriceDeviation` | Price deviation exceeds max allowed | `settle_default_liquidation` deviation check |
-| 50   | `OracleQuorumNotMet` | Quorum of K agreeing feeds not met | `submit_oracle_prices` quorum resolution |
+| 50   | `OracleQuorumNotMet` | Quorum of K agreeing feeds not met | `submit_oracle_prices` quorum resolution, or `settle_default_liquidation` while the weighted-median registry is active |
 | 54   | `OracleNotFound` | Oracle address not in the registry | `remove_oracle` when oracle not registered |
 
 **SDK recovery:**
 - `OraclePriceInvalid`: Ensure oracle returns a valid positive price.
 - `OraclePriceStale`: Wait for oracle price update.
 - `OraclePriceDeviation`: Circuit-breaker tripped; await a new price within bound.
-- `OracleQuorumNotMet`: Submit prices from more independent feeds.
+- `OracleQuorumNotMet`: Submit prices from more independent feeds, or — when
+  raised from settlement — collect fresh reports from enough weighted oracles
+  to reach the registry quorum (registry mode deliberately ignores the
+  caller-supplied `oracle_price`, so there is no admin-price fallback).
 - `OracleNotFound`: Verify the oracle address is registered before removal.
 
 ---
@@ -245,7 +248,7 @@ Errors that do not fit into other categories — entity-not-found, timelock, and
 | 44   | `TreasuryProposalExists` | Proposal already exists | `propose_treasury_withdrawal` while pending |
 | 48   | `OriginalDrawNotFound` | Draw audit record not found | Draw reversal without matching record |
 | 49   | `AttestationBatchNotFound` | No attestation batch committed | `verify_attestation_proof` without batch |
-| 50   | `OracleQuorumNotMet` | Oracle quorum condition not satisfied | `submit_oracle_prices` quorum resolution |
+| 50   | `OracleQuorumNotMet` | Oracle quorum condition not satisfied | `submit_oracle_prices` quorum resolution, or settlement while the registry is active |
 | 51   | `AlreadySettled` | Liquidation settlement already processed | Replay of the same `(borrower, settlement_id)` pair |
 | 52   | `InvalidRiskWeight` | Collateral risk weight exceeds 10 000 bps | `set_collateral_risk_weight` |
 | 53   | `InvalidAttestation` | Attestation proof is invalid or no batch committed | `verify_attestation_proof` with an invalid proof or missing batch |

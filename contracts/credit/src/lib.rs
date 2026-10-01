@@ -145,7 +145,7 @@ use crate::events::{
     publish_borrower_frozen_event, publish_close_factor_bps_set_event,
     publish_contract_upgraded_event, publish_credit_line_event,
     publish_draw_reversed_event, publish_drawn_event, publish_interest_accrued_event,
-    publish_oracle_config_set_event, publish_oracle_price_accepted_event,
+    publish_oracle_config_set_event,
     publish_oracle_quorum_config_set_event, publish_oracle_quorum_price_set_event,
     publish_paused_event, publish_protocol_fee_bounds_set_event,
     publish_protocol_fee_bps_set_event, publish_rate_formula_config_event,
@@ -155,7 +155,7 @@ use crate::events::{
     CreditLineEvent, DrawReversedEvent, DrawnEvent, InterestAccruedEvent,
     RepaymentEvent, TreasuryWithdrawalExecutedEvent, TreasuryWithdrawalProposedEvent,
 };
-use crate::math_utils::{compute_deviation_bps, mul_div, safe_mul_div, Rounding};
+use crate::math_utils::{mul_div, safe_mul_div, Rounding};
 use crate::penalties::LateFeeConfig;
 use crate::storage::{
     admin_key, assert_not_paused, clear_borrower_frozen, clear_reentrancy_guard,
@@ -1990,53 +1990,13 @@ impl Credit {
         require_admin_auth(&env);
         set_reentrancy_guard(&env);
 
-        // Oracle price-feed circuit breaker: validate price before settlement.
-        //
-        // Quorum mode takes precedence over single-oracle mode: when an
-        // `OracleQuorumConfig` is set, the stored quorum price is authoritative
-        // and the caller-supplied `oracle_price` is ignored — `oracle_validation`
-        // enforces that downstream. Running this single-oracle block in quorum
-        // mode would reject the settlement with `OraclePriceInvalid` (#36)
-        // whenever no caller price is supplied, and would let a caller-supplied
-        // price overwrite the quorum price when one is.
-        if crate::storage::get_oracle_quorum_config(&env).is_none() {
-            if let Some(cfg) = crate::storage::get_oracle_config(&env) {
-                let price = oracle_price.unwrap_or_else(|| {
-                    clear_reentrancy_guard(&env);
-                    env.panic_with_error(ContractError::OraclePriceInvalid)
-                });
-
-                if price <= 0 {
-                    clear_reentrancy_guard(&env);
-                    env.panic_with_error(ContractError::OraclePriceInvalid);
-                }
-
-                let now = env.ledger().timestamp();
-
-                if let Some(last_ts) = crate::storage::get_oracle_last_price_ts(&env) {
-                    let age = now.saturating_sub(last_ts);
-                    if age > cfg.max_age_seconds {
-                        clear_reentrancy_guard(&env);
-                        env.panic_with_error(ContractError::OraclePriceStale);
-                    }
-
-                    if let Some(last_price) = crate::storage::get_oracle_last_price(&env) {
-                        let deviation =
-                            compute_deviation_bps(price, last_price).unwrap_or_else(|| {
-                                clear_reentrancy_guard(&env);
-                                env.panic_with_error(ContractError::OraclePriceInvalid)
-                            });
-                        if deviation > cfg.max_deviation_bps {
-                            clear_reentrancy_guard(&env);
-                            env.panic_with_error(ContractError::OraclePriceDeviation);
-                        }
-                    }
-                }
-
-                crate::storage::set_oracle_last_price(&env, price, now);
-                publish_oracle_price_accepted_event(&env, price, now);
-            }
-        }
+        // Oracle price validation lives in `oracle_validation` and runs inside
+        // `lifecycle::settle_default_liquidation` (Step 4), before any state
+        // mutation. Precedence, highest first:
+        //   1. weighted-median registry (`add_oracle` / `report_value`)
+        //   2. quorum-of-K price feed (`submit_oracle_prices`)
+        //   3. single-oracle circuit breaker (`set_oracle_config`)
+        // See the `oracle_validation` module for the full rules.
 
         // Cross-contract auction settlement hook (when configured).
         //

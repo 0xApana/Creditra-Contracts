@@ -68,6 +68,9 @@ fn open_and_default(
     );
     client.open_credit_line(&borrower, &10_000_i128, &300_u32, &60_u32);
     if utilized > 0 {
+        // `draw_credit` enforces the 150% minimum collateral ratio, so the
+        // borrower must post collateral before drawing.
+        client.deposit_collateral(&borrower, &(utilized * 150 / 100));
         client.draw_credit(&borrower, &utilized);
     }
     client.default_credit_line(&borrower);
