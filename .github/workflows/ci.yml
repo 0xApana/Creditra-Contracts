@@ -97,6 +97,10 @@ jobs:
             exit 1
           fi
 
+      # Every document must stay discoverable from docs/INDEX.md.
+      - name: Check documentation index
+        run: scripts/check_docs_index.sh
+
       - name: Print toolchain versions
         run: |
           rustc --version
