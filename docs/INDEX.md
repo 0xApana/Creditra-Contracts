@@ -83,8 +83,9 @@ contract:
 
 
 For event schema:
-- [`docs/EVENTS_CATALOG.md`](./EVENTS_CATALOG.md) — **canonical event catalog and
-  versioning policy** (replaces scattered references in indexer-integration).
+- [`docs/EVENT_CATALOG.md`](./EVENT_CATALOG.md) — **canonical event catalog and
+  versioning policy** (replaces the former `EVENTS_CATALOG.md`, `EVENT_SCHEMA.md`,
+  and `events-schema.md`; validated by `events_catalog.rs`).
 
 ---
 
@@ -157,8 +158,7 @@ exists but is not referenced from this page (and is run in CI).
 | Auditors / integrators | [`CROSS_CONTRACT_HANDSHAKE.md`](./CROSS_CONTRACT_HANDSHAKE.md) | Cross-Contract Handshake Protocol |
 | Integrators | [`ERROR_CODES.md`](./ERROR_CODES.md) | Redirect stub → [`errors.md`](./errors.md) |
 | Integrators | [`ERROR_MIGRATION.md`](./ERROR_MIGRATION.md) | V1 to V2 `ContractError` encoding migration |
-| Integrators | [`EVENTS_CATALOG.md`](./EVENTS_CATALOG.md) | **Authoritative event catalog and versioning policy** |
-| Integrators | [`EVENT_SCHEMA.md`](./EVENT_SCHEMA.md) | Event Schema Documentation |
+| Integrators | [`EVENT_CATALOG.md`](./EVENT_CATALOG.md) | **Authoritative event catalog and versioning policy** (validated by `events_catalog.rs`) |
 | Grant reviewers / contributors | [`EXECUTION_QUALITY.md`](./EXECUTION_QUALITY.md) | Creditra Execution Quality — The Receipts |
 | Everyone | [`GLOSSARY.md`](./GLOSSARY.md) | Creditra Glossary |
 | Everyone | [`INDEX.md`](./INDEX.md) | Creditra Documentation Index |
@@ -180,7 +180,6 @@ exists but is not referenced from this page (and is run in CI).
 | Operators | [`deploy.md`](./deploy.md) | Deployment Guide |
 | Auditors / integrators | [`error-taxonomy.md`](./error-taxonomy.md) | Redirect stub → [`errors.md`](./errors.md) |
 | Integrators | [`errors.md`](./errors.md) | **Canonical `ContractError` reference** (codes, categories, recovery) |
-| Integrators | [`events-schema.md`](./events-schema.md) | Creditra Event Schema Reference |
 | Integrators | [`indexer-integration.md`](./indexer-integration.md) | Indexer Integration Guide (Soroban Events) |
 | Auditors / contributors | [`interest-accrual-design.md`](./interest-accrual-design.md) | Interest Accrual Design Specification |
 | Integrators | [`interest-accrual.md`](./interest-accrual.md) | Accrual normative reference |
@@ -203,8 +202,6 @@ column as the single source of truth and do not extend the duplicates.
 | [`ERROR_CODES.md`](./ERROR_CODES.md) | [`errors.md`](./errors.md) | redirect stub; the error-code table lives only in `errors.md` |
 | [`contract-errors.md`](./contract-errors.md) | [`errors.md`](./errors.md) | redirect stub; the error-code table lives only in `errors.md` |
 | [`error-taxonomy.md`](./error-taxonomy.md) | [`errors.md`](./errors.md) | redirect stub; categories and recovery live in `errors.md` |
-| [`EVENT_SCHEMA.md`](./EVENT_SCHEMA.md) | [`EVENTS_CATALOG.md`](./EVENTS_CATALOG.md) | legacy event schema (catalogue is authoritative) |
-| [`events-schema.md`](./events-schema.md) | [`EVENTS_CATALOG.md`](./EVENTS_CATALOG.md) | legacy event schema (catalogue is authoritative) |
 | [`interest-accrual-design.md`](./interest-accrual-design.md) | [`interest-accrual.md`](./interest-accrual.md) | design history for the normative accrual reference |
 
 ### Error documentation
