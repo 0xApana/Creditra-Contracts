@@ -129,7 +129,12 @@ mod risk;
 pub use crate::risk::compute_rate_from_score;
 pub use crate::types::FreezeReason;
 pub mod scoring;
-mod storage;
+/// Storage layout, TTL policy and typed accessors (see also
+/// [`storage`] docs and `docs/STORAGE_LAYOUT.md`).
+///
+/// Public so integration tests can assert on the exact storage keys and TTL
+/// constants the contract uses (e.g. `tests/storage_ttl.rs`).
+pub mod storage;
 pub mod types;
 mod views;
 
@@ -165,17 +170,22 @@ use crate::storage::{
     get_pending_treasury_withdrawal, get_utilization_cap_bps as storage_get_utilization_cap_bps,
     is_borrower_blocked as storage_is_borrower_blocked,
     is_borrower_frozen as storage_is_borrower_frozen, persist_credit_line, proposed_admin_key,
-    proposed_at_key, rate_cfg_key, set_borrower_blocked as storage_set_borrower_blocked,
-    set_borrower_frozen_until, set_borrower_unblocked,
+    proposed_at_key, rate_cfg_key, rate_formula_key, record_freeze_timestamp_if_cooldown,
+    set_borrower_blocked as storage_set_borrower_blocked, set_borrower_frozen_until,
+    set_borrower_unblocked, set_draw_reversed_amount as storage_set_draw_reversed_amount,
     set_last_draw_ts as storage_set_last_draw_ts, set_oracle_config, set_oracle_quorum_config,
     set_pending_treasury_withdrawal, set_reentrancy_guard,
-    set_utilization_cap_bps as storage_set_utilization_cap_bps, DataKey, MAX_ENUMERATION_LIMIT,
+    set_utilization_cap_bps as storage_set_utilization_cap_bps,
+    get_draw_audit as storage_get_draw_audit,
+    get_draw_reversed_amount as storage_get_draw_reversed_amount, DataKey,
+    MAX_ENUMERATION_LIMIT,
 };
 use crate::oracles::{resolve_quorum_price, MAX_ORACLE_FEEDS};
 use crate::types::{
-    ContractError, CreditLineData, CreditLinesPage, CreditStatus, GracePeriodConfig,
-    GraceWaiverMode, OracleConfig, ProtocolConfig, ProtocolSummary, ProtocolSummaryView,
-    ProofOfReserve, RateChangeConfig, RateFormulaConfig, TreasuryWithdrawalProposal,
+    BorrowCapabilities, ContractError, CreditLineData, CreditLineSnapshot, CreditLinesPage,
+    CreditStatus, GracePeriodConfig, GraceWaiverMode, LifecycleCapabilities, OracleConfig,
+    OracleQuorumConfig, ProofOfReserve, ProtocolConfig, ProtocolSummary, ProtocolSummaryView,
+    QueryCapabilities, RateChangeConfig, RateFormulaConfig, TreasuryWithdrawalProposal,
 };
 
 #[cfg(test)]
@@ -1863,6 +1873,11 @@ impl Credit {
     ///
     /// `start_after` is an exclusive cursor over the stable numeric id.
     /// Results are capped by `MAX_ENUMERATION_LIMIT` for predictable cost.
+    ///
+    /// # Storage
+    /// Every visited line is loaded through [`crate::storage::get_credit_line`],
+    /// so enumeration refreshes the persistent TTL of each borrower entry it
+    /// touches instead of relying on a raw storage read.
     pub fn enumerate_credit_lines(
         env: Env,
         start_after: Option<u32>,
@@ -1880,11 +1895,10 @@ impl Credit {
         let mut returned = 0_u32;
         while next_id < count && returned < capped_limit {
             if let Some(borrower) = get_borrower_by_credit_line_id(&env, next_id) {
-                if let Some(line) = env
-                    .storage()
-                    .persistent()
-                    .get::<Address, CreditLineData>(&borrower)
-                {
+                // TTL bump on read: this is a paginated read over live credit
+                // lines, so each visited entry is refreshed through the same
+                // getter used by the rest of the contract.
+                if let Some(line) = crate::storage::get_credit_line(&env, &borrower) {
                     out.push_back((next_id, line));
                     returned = returned.saturating_add(1);
                 }
@@ -2441,22 +2455,12 @@ impl Credit {
             .unwrap_or_else(|| env.panic_with_error(ContractError::CreditLineNotFound));
         credit_line = accrual::apply_accrual(&env, credit_line);
 
-        let original_draw: i128 = env
-            .storage()
-            .persistent()
-            .get(&DataKey::DrawAudit(DrawAuditKey {
-                borrower: borrower.clone(),
-                timestamp: original_ts,
-            }))
+        // Load the audit trail through TTL-bumping accessors as well: these are
+        // per-borrower persistent entries, so a reverse-draw path must refresh
+        // them instead of letting them drift to archival (Issue #1273).
+        let original_draw: i128 = storage_get_draw_audit(&env, &borrower, original_ts)
             .unwrap_or_else(|| env.panic_with_error(ContractError::OriginalDrawNotFound));
-        let already_reversed: i128 = env
-            .storage()
-            .persistent()
-            .get(&DataKey::DrawReversedAmount(DrawAuditKey {
-                borrower: borrower.clone(),
-                timestamp: original_ts,
-            }))
-            .unwrap_or(0);
+        let already_reversed: i128 = storage_get_draw_reversed_amount(&env, &borrower, original_ts);
         let remaining_reversible = original_draw.saturating_sub(already_reversed);
         if amount > remaining_reversible {
             env.panic_with_error(ContractError::OverLimit);
@@ -2469,13 +2473,7 @@ impl Credit {
 
         credit_line.utilized_amount = new_utilized_amount;
         env.storage().persistent().set(&borrower, &credit_line);
-        env.storage().persistent().set(
-            &DataKey::DrawReversedAmount(DrawAuditKey {
-                borrower: borrower.clone(),
-                timestamp: original_ts,
-            }),
-            &(already_reversed + amount),
-        );
+        storage_set_draw_reversed_amount(&env, &borrower, original_ts, already_reversed + amount);
 
         publish_draw_reversed_event(
             &env,
