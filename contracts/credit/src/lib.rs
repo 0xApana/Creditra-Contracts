@@ -527,7 +527,7 @@ impl Credit {
             env.panic_with_error(ContractError::OverLimit);
         }
 
-        // Enforce minimum collateral ratio
+        // Enforce minimum collateral ratio: required_collateral = floor(utilized * min_ratio_bps / 10_000)
         let min_ratio_bps = crate::storage::get_min_collateral_ratio_bps(&env).unwrap_or(15000);
         // Value the borrower's collateral through the shared helper so balances
         // deposited via `deposit_collateral_token` back the draw and per-asset
