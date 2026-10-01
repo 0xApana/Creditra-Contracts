@@ -679,7 +679,8 @@ mod edge_cases {
         
         // Repay exactly 4 installments of principal + accrued interest
         let repay = accrued + 4 * amount_per_period;
-        fund_repayment(&ctx, repay);
+        // The late fee is pulled from the borrower on top of the repayment.
+        fund_repayment(&ctx, repay + 3 * fee_amount);
         
         let treasury_before = ctx.client().get_protocol_summary().treasury_balance;
         ctx.client().repay_credit(&ctx.borrower, &repay);

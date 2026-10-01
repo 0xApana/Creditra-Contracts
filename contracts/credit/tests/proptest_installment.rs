@@ -157,8 +157,9 @@ fn setup_extreme_env(debt: i128) -> Ctx {
     client.draw_credit(&borrower, &debt);
 
     // `repay_credit` pulls funds with `transfer_from`, so the borrower must
-    // allow the contract to move the full debt before the repayment.
-    token::Client::new(&env, &token_address).approve(&borrower, &contract_id, &debt, &u32::MAX);
+    // allow the contract to move the full debt before the repayment, plus any
+    // late fee that is now pulled from the borrower alongside it.
+    token::Client::new(&env, &token_address).approve(&borrower, &contract_id, &headroom, &u32::MAX);
 
     Ctx {
         env,

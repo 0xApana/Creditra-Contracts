@@ -1449,24 +1449,29 @@ pub fn advance_repayment_schedule_after_repay(
     borrower: &Address,
     effective_repay: i128,
     interest_repaid: i128,
-) {
+) -> i128 {
     let principal_repaid = match effective_repay.checked_sub(interest_repaid) {
         Some(principal) if principal > 0 => principal,
-        _ => return,
+        _ => return 0,
     };
 
     let Some(mut schedule) = get_repayment_schedule(env, borrower) else {
-        return;
+        return 0;
     };
 
     if schedule.amount_per_period <= 0 || schedule.period_seconds == 0 {
-        return;
+        return 0;
     }
 
     let installments_paid = (principal_repaid / schedule.amount_per_period) as u64;
     if installments_paid == 0 {
-        return;
+        return 0;
     }
+
+    // Total late fee owed by the borrower for this repayment. It is returned to
+    // the caller (`repay_credit`), which pulls it from the borrower and accrues
+    // it as a protocol fee, so no phantom treasury credit is created here.
+    let mut total_late_fee: i128 = 0;
 
     // ── Late-fee surcharge (O(1), aggregated) ───────────────────────────────
     //
@@ -1487,13 +1492,12 @@ pub fn advance_repayment_schedule_after_repay(
             installments_paid,
         );
         if overdue > 0 {
-            // `checked_mul` preserves the old loop's overflow behaviour: the
-            // repeated `add_treasury_balance` reverted with `Overflow` once the
-            // running total (or an individual product) exceeded `i128`.
+            // `checked_mul` reverts with `Overflow` once the aggregate fee
+            // exceeds `i128`, matching the old per-installment loop.
             let aggregate_fee = late_fee
                 .checked_mul(overdue as i128)
                 .unwrap_or_else(|| env.panic_with_error(ContractError::Overflow));
-            crate::storage::add_treasury_balance(env, aggregate_fee);
+            total_late_fee = aggregate_fee;
             // One event per repayment: `fee` is the aggregate for every overdue
             // installment and `installment_index` is the highest (most recent)
             // installment charged, preserving the 1-based index space the old
@@ -1512,6 +1516,8 @@ pub fn advance_repayment_schedule_after_repay(
     let advance_seconds = installments_paid.saturating_mul(schedule.period_seconds);
     schedule.next_due_ts = schedule.next_due_ts.saturating_add(advance_seconds);
     storage_set_repayment_schedule(env, borrower, &schedule);
+
+    total_late_fee
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
